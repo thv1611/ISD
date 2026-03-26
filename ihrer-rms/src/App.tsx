@@ -71,7 +71,7 @@ type UserItem = {
 };
 
 const API_BASE = "http://localhost:5000";
-const INACTIVE_TIMEOUT = 10 * 1000;
+const INACTIVE_TIMEOUT = 60 * 60 * 1000;
 const DASHBOARD_REFRESH_INTERVAL = 30 * 1000;
 const TOKEN_KEY = "ihrer_auth_token";
 const USER_KEY = "ihrer_auth_user";

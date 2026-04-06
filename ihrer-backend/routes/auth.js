@@ -3,6 +3,11 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
+const {
+  hashPassword,
+  isHashedPassword,
+  verifyPassword,
+} = require("../utils/password");
 
 const JWT_SECRET = process.env.JWT_SECRET || "ihrer_super_secret_key_change_me";
 const JWT_EXPIRES_IN = "8h";
@@ -48,6 +53,7 @@ router.post("/login", (req, res) => {
 
   db.query(sql, [identifier.trim(), identifier.trim()], (err, results) => {
     if (err) {
+      console.error("Login query failed:", err);
       return res.status(500).json({
         success: false,
         message: "Lỗi máy chủ. Vui lòng thử lại sau.",
@@ -70,7 +76,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (user.PasswordHash !== password) {
+    if (!verifyPassword(password, user.PasswordHash)) {
       const newAttempts = Number(user.FailedLoginAttempts || 0) + 1;
       const willLock = newAttempts >= 5;
 
@@ -83,6 +89,7 @@ router.post("/login", (req, res) => {
         [newAttempts, willLock ? "Locked" : "Active", user.EmployeeID],
         (updateErr) => {
           if (updateErr) {
+            console.error("Failed to update login attempts:", updateErr);
             return res.status(500).json({
               success: false,
               message: "Lỗi cập nhật trạng thái đăng nhập.",
@@ -106,11 +113,16 @@ router.post("/login", (req, res) => {
       return;
     }
 
+    const nextStoredPassword = isHashedPassword(user.PasswordHash)
+      ? user.PasswordHash
+      : hashPassword(password);
+
     db.query(
-      "UPDATE Employees SET FailedLoginAttempts = 0 WHERE EmployeeID = ?",
-      [user.EmployeeID],
+      "UPDATE Employees SET FailedLoginAttempts = 0, PasswordHash = ? WHERE EmployeeID = ?",
+      [nextStoredPassword, user.EmployeeID],
       (resetErr) => {
         if (resetErr) {
+          console.error("Failed to finalize successful login:", resetErr);
           return res.status(500).json({
             success: false,
             message: "Lỗi cập nhật đăng nhập.",

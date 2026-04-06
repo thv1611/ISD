@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken, requireRole } = require("../middleware/auth");
+const { hashPassword } = require("../utils/password");
 
 router.get("/", authenticateToken, requireRole("Admin"), (req, res) => {
   const sql = `
@@ -50,6 +51,7 @@ router.post("/", authenticateToken, requireRole("Admin"), (req, res) => {
 
   db.query(checkSql, [employeeCode, email], (checkErr, checkResults) => {
     if (checkErr) {
+      console.error("User uniqueness check failed:", checkErr);
       return res.status(500).json({
         success: false,
         message: "Lỗi kiểm tra dữ liệu người dùng.",
@@ -63,17 +65,20 @@ router.post("/", authenticateToken, requireRole("Admin"), (req, res) => {
       });
     }
 
+    const defaultPasswordHash = hashPassword("1");
+
     const insertSql = `
       INSERT INTO Employees
       (EmployeeCode, FullName, Email, PasswordHash, Role, AccountStatus, FailedLoginAttempts)
-      VALUES (?, ?, ?, '1', ?, ?, 0)
+      VALUES (?, ?, ?, ?, ?, ?, 0)
     `;
 
     db.query(
       insertSql,
-      [employeeCode, fullName, email, role, accountStatus],
+      [employeeCode, fullName, email, defaultPasswordHash, role, accountStatus],
       (insertErr) => {
         if (insertErr) {
+          console.error("User insert failed:", insertErr);
           return res.status(500).json({
             success: false,
             message: "Không thể tạo người dùng.",
@@ -109,6 +114,7 @@ router.put("/:id", authenticateToken, requireRole("Admin"), (req, res) => {
 
   db.query(checkSql, [employeeCode, email, id], (checkErr, checkResults) => {
     if (checkErr) {
+      console.error("User update uniqueness check failed:", checkErr);
       return res.status(500).json({
         success: false,
         message: "Lỗi kiểm tra dữ liệu người dùng.",
@@ -133,6 +139,7 @@ router.put("/:id", authenticateToken, requireRole("Admin"), (req, res) => {
       [employeeCode, fullName, email, role, accountStatus, id],
       (updateErr) => {
         if (updateErr) {
+          console.error("User update failed:", updateErr);
           return res.status(500).json({
             success: false,
             message: "Không thể cập nhật người dùng.",
@@ -156,6 +163,9 @@ router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, 
     [id],
     (findErr, findResults) => {
       if (findErr || findResults.length === 0) {
+        if (findErr) {
+          console.error("User lock lookup failed:", findErr);
+        }
         return res.status(404).json({
           success: false,
           message: "Không tìm thấy người dùng.",
@@ -170,6 +180,7 @@ router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, 
         [nextStatus, id],
         (updateErr) => {
           if (updateErr) {
+            console.error("User lock update failed:", updateErr);
             return res.status(500).json({
               success: false,
               message: "Không thể cập nhật trạng thái tài khoản.",

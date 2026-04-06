@@ -235,7 +235,7 @@ router.patch("/:bookingId/cancel", authenticateToken, (req, res) => {
     if (diffMinutes < 60) {
       return res.status(400).json({
         success: false,
-        message: "Chỉ được hủy trước ít nhất 60 phút trước giờ bắt đầu.",
+        message: "Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất 60 phút.",
       });
     }
 

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
+const { hashPassword, verifyPassword } = require("../utils/password");
 
 router.get("/me", authenticateToken, (req, res) => {
   const sql = `
@@ -58,6 +59,7 @@ router.put("/me", authenticateToken, (req, res) => {
 
   db.query(checkEmailSql, [email, req.user.id], (checkErr, checkResults) => {
     if (checkErr) {
+      console.error("Profile email check failed:", checkErr);
       return res.status(500).json({
         success: false,
         message: "Lỗi kiểm tra email.",
@@ -80,6 +82,7 @@ router.put("/me", authenticateToken, (req, res) => {
 
     db.query(getUserSql, [req.user.id], (findErr, findResults) => {
       if (findErr) {
+        console.error("Profile lookup failed:", findErr);
         return res.status(500).json({
           success: false,
           message: "Không thể tải thông tin người dùng.",
@@ -103,7 +106,7 @@ router.put("/me", authenticateToken, (req, res) => {
         });
       }
 
-      if (newPassword && currentPassword !== user.PasswordHash) {
+      if (newPassword && !verifyPassword(currentPassword, user.PasswordHash)) {
         return res.status(400).json({
           success: false,
           message: "Mật khẩu hiện tại không đúng.",
@@ -111,7 +114,7 @@ router.put("/me", authenticateToken, (req, res) => {
       }
 
       if (newPassword) {
-        finalPassword = newPassword;
+        finalPassword = hashPassword(newPassword);
       }
 
       const updateSql = `
@@ -125,6 +128,7 @@ router.put("/me", authenticateToken, (req, res) => {
         [fullName, email, finalPassword, req.user.id],
         (updateErr) => {
           if (updateErr) {
+            console.error("Profile update failed:", updateErr);
             return res.status(500).json({
               success: false,
               message: "Không thể cập nhật thông tin cá nhân.",

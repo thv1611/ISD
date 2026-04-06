@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
+import { API_BASE } from "../config";
 
 type ProfilePageProps = {
   authToken: string;
-  currentUser: {
-    id: number;
-    employeeCode: string;
-    fullName: string;
-    email: string;
-    role: "Admin" | "Staff";
-  };
   onProfileUpdated: (updatedUser: {
     id: number;
     employeeCode: string;
@@ -20,7 +14,6 @@ type ProfilePageProps = {
 
 export default function ProfilePage({
   authToken,
-  currentUser,
   onProfileUpdated,
 }: ProfilePageProps) {
   const [form, setForm] = useState({
@@ -38,7 +31,7 @@ export default function ProfilePage({
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await fetch("http://localhost:5000/profile/me", {
+        const response = await fetch(`${API_BASE}/profile/me`, {
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
@@ -74,7 +67,7 @@ export default function ProfilePage({
     setMessageType("");
 
     try {
-      const response = await fetch("http://localhost:5000/profile/me", {
+      const response = await fetch(`${API_BASE}/profile/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

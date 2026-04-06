@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { API_BASE } from "../config";
 
 type BookingPageProps = {
   currentUser: {
@@ -56,6 +57,13 @@ export default function BookingPage({
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error" | "">("");
   const [loading, setLoading] = useState(false);
+  const [requiredErrors, setRequiredErrors] = useState({
+    roomId: false,
+    bookingDate: false,
+    startTime: false,
+    endTime: false,
+    purpose: false,
+  });
 
   const datePickerRef = useRef<any>(null);
 
@@ -76,7 +84,12 @@ export default function BookingPage({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setRequiredErrors((prev) => ({
+      ...prev,
+      [name]: name === "purpose" ? !value.trim() : !value,
+    }));
     setMessage("");
     setMessageType("");
   };
@@ -84,17 +97,28 @@ export default function BookingPage({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (
-      !form.roomId ||
-      !form.bookingDate ||
-      !form.startTime ||
-      !form.endTime ||
-      !form.purpose.trim()
-    ) {
+    const nextErrors = {
+      roomId: !form.roomId,
+      bookingDate: !form.bookingDate,
+      startTime: !form.startTime,
+      endTime: !form.endTime,
+      purpose: !form.purpose.trim(),
+    };
+
+    if (Object.values(nextErrors).some(Boolean)) {
+      setRequiredErrors(nextErrors);
       setMessage("Vui lòng nhập đầy đủ thông tin đặt phòng.");
       setMessageType("error");
       return;
     }
+
+    setRequiredErrors({
+      roomId: false,
+      bookingDate: false,
+      startTime: false,
+      endTime: false,
+      purpose: false,
+    });
 
     const today = formatDateToISO(getToday());
 
@@ -113,7 +137,7 @@ export default function BookingPage({
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/bookings", {
+      const response = await fetch(`${API_BASE}/bookings`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,6 +173,13 @@ export default function BookingPage({
         startTime: "",
         endTime: "",
         purpose: "",
+      });
+      setRequiredErrors({
+        roomId: false,
+        bookingDate: false,
+        startTime: false,
+        endTime: false,
+        purpose: false,
       });
 
       onBookingSuccess();
@@ -194,19 +225,33 @@ export default function BookingPage({
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Chọn phòng
             </label>
-            <select
-              name="roomId"
-              value={form.roomId}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            >
-              <option value="">-- Chọn phòng --</option>
-              {filteredRooms.map((item) => (
-                <option key={item.ResourceID} value={item.ResourceID}>
-                  {item.ResourceName} ({item.ResourceType})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                name="roomId"
+                value={form.roomId}
+                onChange={handleChange}
+                onBlur={() =>
+                  setRequiredErrors((prev) => ({ ...prev, roomId: !form.roomId }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.roomId
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              >
+                <option value="">-- Chọn phòng --</option>
+                {filteredRooms.map((item) => (
+                  <option key={item.ResourceID} value={item.ResourceID}>
+                    {item.ResourceName} ({item.ResourceType})
+                  </option>
+                ))}
+              </select>
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.roomId ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
           </div>
 
           <div>
@@ -220,6 +265,7 @@ export default function BookingPage({
                 selected={selectedDate}
                 onChange={(date: Date | null) => {
                   setSelectedDate(date);
+                  setRequiredErrors((prev) => ({ ...prev, bookingDate: !date }));
                   setMessage("");
                   setMessageType("");
                 }}
@@ -228,7 +274,10 @@ export default function BookingPage({
                 placeholderText="dd/MM/yyyy"
                 wrapperClassName="w-full"
 
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-12 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className={`w-full rounded-2xl border px-4 py-3 pr-16 outline-none transition ${requiredErrors.bookingDate
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
               />
 
               <button
@@ -258,40 +307,83 @@ export default function BookingPage({
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Mục đích sử dụng
             </label>
-            <input
-              type="text"
-              name="purpose"
-              value={form.purpose}
-              onChange={handleChange}
-              placeholder="Ví dụ: Họp nhóm, học thực hành..."
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                name="purpose"
+                value={form.purpose}
+                onChange={handleChange}
+                onBlur={() =>
+                  setRequiredErrors((prev) => ({ ...prev, purpose: !form.purpose.trim() }))
+                }
+                required
+                placeholder="Ví dụ: Họp nhóm, học thực hành..."
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.purpose
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.purpose ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Giờ bắt đầu
             </label>
-            <input
-              type="time"
-              name="startTime"
-              value={form.startTime}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
+            <div className="relative">
+              <input
+                type="time"
+                name="startTime"
+                value={form.startTime}
+                onChange={handleChange}
+                onBlur={() =>
+                  setRequiredErrors((prev) => ({ ...prev, startTime: !form.startTime }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.startTime
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.startTime ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Giờ kết thúc
             </label>
-            <input
-              type="time"
-              name="endTime"
-              value={form.endTime}
-              onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-            />
+            <div className="relative">
+              <input
+                type="time"
+                name="endTime"
+                value={form.endTime}
+                onChange={handleChange}
+                onBlur={() =>
+                  setRequiredErrors((prev) => ({ ...prev, endTime: !form.endTime }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.endTime
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.endTime ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
           </div>
 
           {message && (

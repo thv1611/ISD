@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE } from "../config";
 
 type Role = "Admin" | "Staff";
 type Status = "Active" | "Locked";
@@ -40,6 +41,11 @@ export default function ManageUsers({
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [requiredErrors, setRequiredErrors] = useState({
+    employeeCode: false,
+    fullName: false,
+    email: false,
+  });
 
   const resetForm = () => {
     setForm({
@@ -49,14 +55,42 @@ export default function ManageUsers({
       role: "Staff",
       accountStatus: "Active",
     });
+    setRequiredErrors({
+      employeeCode: false,
+      fullName: false,
+      email: false,
+    });
     setEditingId(null);
   };
 
+  const handleFieldChange = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (key === "employeeCode" || key === "fullName" || key === "email") {
+      setRequiredErrors((prev) => ({
+        ...prev,
+        [key]: !String(value).trim(),
+      }));
+    }
+    setMessage("");
+  };
+
   const handleSubmit = async () => {
+    const nextErrors = {
+      employeeCode: !form.employeeCode.trim(),
+      fullName: !form.fullName.trim(),
+      email: !form.email.trim(),
+    };
+
+    if (Object.values(nextErrors).some(Boolean)) {
+      setRequiredErrors(nextErrors);
+      setMessage("Vui lòng nhập đầy đủ thông tin người dùng.");
+      return;
+    }
+
     const url =
       editingId === null
-        ? "http://localhost:5000/users"
-        : `http://localhost:5000/users/${editingId}`;
+        ? `${API_BASE}/users`
+        : `${API_BASE}/users/${editingId}`;
 
     const method = editingId === null ? "POST" : "PUT";
 
@@ -87,6 +121,12 @@ export default function ManageUsers({
       role: item.Role,
       accountStatus: item.AccountStatus,
     });
+    setRequiredErrors({
+      employeeCode: false,
+      fullName: false,
+      email: false,
+    });
+    setMessage("");
   };
 
   const handleToggleLock = async (id: number, currentStatus: "Active" | "Locked") => {
@@ -95,7 +135,7 @@ export default function ManageUsers({
   if (!confirmed) return;
 
   const response = await fetch(
-    `http://localhost:5000/users/${id}/toggle-lock`,
+    `${API_BASE}/users/${id}/toggle-lock`,
     {
       method: "PATCH",
       headers: {
@@ -128,42 +168,110 @@ export default function ManageUsers({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <input
-            placeholder="Mã nhân viên"
-            value={form.employeeCode}
-            onChange={(e) => setForm({ ...form, employeeCode: e.target.value })}
-            className="rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          />
-          <input
-            placeholder="Họ và tên"
-            value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-            className="rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          />
-          <input
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          />
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-            className="rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          >
-            <option value="Admin">Quản trị viên</option>
-            <option value="Staff">Nhân viên</option>
-          </select>
-          <select
-            value={form.accountStatus}
-            onChange={(e) =>
-              setForm({ ...form, accountStatus: e.target.value as Status })
-            }
-            className="rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-          >
-            <option value="Active">Hoạt động</option>
-            <option value="Locked">Đã khóa</option>
-          </select>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Mã nhân viên
+            </label>
+            <div className="relative">
+              <input
+                placeholder="Mã nhân viên"
+                value={form.employeeCode}
+                onChange={(e) => handleFieldChange("employeeCode", e.target.value)}
+                onBlur={(e) => handleFieldChange("employeeCode", e.target.value)}
+                required
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.employeeCode
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.employeeCode ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Họ và tên
+            </label>
+            <div className="relative">
+              <input
+                placeholder="Họ và tên"
+                value={form.fullName}
+                onChange={(e) => handleFieldChange("fullName", e.target.value)}
+                onBlur={(e) => handleFieldChange("fullName", e.target.value)}
+                required
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.fullName
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.fullName ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Email
+            </label>
+            <div className="relative">
+              <input
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                onBlur={(e) => handleFieldChange("email", e.target.value)}
+                required
+                className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.email
+                    ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"
+                    : "border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  }`}
+              />
+              <span
+                className={`pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-lg ${requiredErrors.email ? "text-red-500" : "text-slate-400"
+                  }`}
+              >
+                *
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Vai trò
+            </label>
+            <div className="relative">
+              <select
+                value={form.role}
+                onChange={(e) => handleFieldChange("role", e.target.value as Role)}
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-10 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="Admin">Quản trị viên</option>
+                <option value="Staff">Nhân viên</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Trạng thái tài khoản
+            </label>
+            <div className="relative">
+              <select
+                value={form.accountStatus}
+                onChange={(e) =>
+                  handleFieldChange("accountStatus", e.target.value as Status)
+                }
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-10 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="Active">Hoạt động</option>
+                <option value="Locked">Đã khóa</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {message && (

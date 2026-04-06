@@ -5,6 +5,8 @@ import ResourceCalendar from "./app/pages/ResourceCalendar";
 import ManageUsers from "./app/pages/ManageUsers";
 import BookingPage from "./app/pages/BookingPage";
 import BookingHistoryPage from "./app/pages/BookingHistoryPage";
+import ProfilePage from "./app/pages/ProfilePage";
+import { API_BASE } from "./app/config";
 
 type Role = "Admin" | "Staff";
 type PageKey = "dashboard" | "calendar" | "booking" | "history" | "users" | "profile";
@@ -70,7 +72,6 @@ type UserItem = {
   AccountStatus: "Active" | "Locked";
 };
 
-const API_BASE = "http://localhost:5000";
 const INACTIVE_TIMEOUT = 60 * 60 * 1000;
 const DASHBOARD_REFRESH_INTERVAL = 30 * 1000;
 const TOKEN_KEY = "ihrer_auth_token";
@@ -447,7 +448,6 @@ export default function App() {
         {currentPage === "profile" && (
           <ProfilePage
             authToken={authToken}
-            currentUser={currentUser}
             onProfileUpdated={(updatedUser) => {
               setCurrentUser(updatedUser);
               localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
@@ -466,4 +466,3 @@ export default function App() {
     </div>
   );
 }
-import ProfilePage from "./app/pages/ProfilePage";

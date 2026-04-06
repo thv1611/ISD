@@ -1,3 +1,5 @@
+import { API_BASE } from "../config";
+
 type BookingHistoryPageProps = {
     bookings: {
         BookingID: number;
@@ -36,7 +38,7 @@ export default function BookingHistoryPage({
         if (!confirmed) return;
 
         const response = await fetch(
-            `http://localhost:5000/bookings/${bookingId}/cancel`,
+            `${API_BASE}/bookings/${bookingId}/cancel`,
             {
                 method: "PATCH",
                 headers: {

@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { API_BASE } from "../config";
 
 type Role = "Admin" | "Staff";
 
@@ -32,6 +33,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    let timeoutId: number | undefined;
 
     if (!form.identifier.trim() && !form.password.trim()) {
       setError("Vui lòng nhập Email/Mã nhân viên và mật khẩu.");
@@ -51,22 +53,27 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       setLoading(true);
       setError("");
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch("http://localhost:5000/auth/login", {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           identifier: form.identifier.trim(),
           password: form.password,
         }),
       });
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await response.json()
+        : null;
 
-      const data = await response.json();
-
-      if (!data.success) {
-        setError(data.message || "Đăng nhập thất bại.");
+      if (!response.ok || !data?.success) {
+        setError(data?.message || "Đăng nhập thất bại.");
         return;
       }
 
@@ -76,9 +83,17 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         identifier: "",
         password: "",
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setError("Máy chủ đăng nhập phản hồi quá lâu. Kiểm tra backend rồi thử lại.");
+        return;
+      }
+
       setError("Không thể kết nối tới máy chủ backend.");
     } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
       setLoading(false);
     }
   };

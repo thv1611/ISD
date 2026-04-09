@@ -55,66 +55,67 @@ export default function BookingHistoryPage({
         }
     };
 
-return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <div className="mb-5 flex items-center gap-2">
-            <span className="text-lg">🗓️</span>
-            <h2 className="text-xl font-bold text-slate-900">Lịch sử đặt phòng</h2>
-        </div>
+    return (
+        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-5 flex items-center gap-2">
+                <span className="text-lg">🗓️</span>
+                <h2 className="text-xl font-bold text-slate-900">Lịch sử đặt phòng</h2>
+            </div>
 
-        <div className="space-y-4">
-            {bookings.map((booking) => (
-                <div
-                    key={booking.BookingID}
-                    className="rounded-2xl border border-slate-200 p-4"
-                >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-lg font-semibold text-slate-900">
-                                    {booking.ResourceName}
+            <div className="space-y-4">
+                {bookings.map((booking) => (
+                    <div
+                        key={booking.BookingID}
+                        className="rounded-2xl border border-slate-200 p-4"
+                    >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-lg font-semibold text-slate-900">
+                                        {booking.ResourceName}
+                                    </div>
+                                    {renderStatusBadge(booking.BookingStatus)}
                                 </div>
-                                {renderStatusBadge(booking.BookingStatus)}
+
+                                <div className="mt-3 text-sm leading-6 text-slate-600">
+                                    <div>
+                                        <span className="font-medium">Loại phòng:</span>{" "}
+                                        {booking.ResourceType}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Ngày:</span>{" "}
+                                        {formatDateVN(booking.BookingDate)}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Thời gian:</span>{" "}
+                                        {booking.StartTime} - {booking.EndTime}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Mục đích:</span>{" "}
+                                        {booking.Purpose}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="mt-3 text-sm leading-6 text-slate-600">
-                                <div>
-                                    <span className="font-medium">Loại phòng:</span>{" "}
-                                    {booking.ResourceType}
-                                </div>
-                                <div>
-                                    <span className="font-medium">Ngày:</span>{" "}
-                                    {formatDateVN(booking.BookingDate)}
-                                </div>
-                                <div>
-                                    <span className="font-medium">Thời gian:</span>{" "}
-                                    {booking.StartTime} - {booking.EndTime}
-                                </div>
-                                <div>
-                                    <span className="font-medium">Mục đích:</span>{" "}
-                                    {booking.Purpose}
-                                </div>
-                            </div>
+                            {booking.BookingStatus === "Đã đặt" && currentUser.role === "Staff" && (
+                                <button
+                                    onClick={() => handleCancelBooking(booking.BookingID)}
+                                    className="rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                                >
+                                    Hủy
+                                </button>
+                            )}
                         </div>
-
-                        {booking.BookingStatus === "Đã đặt" && currentUser.role === "Staff" && (
-                            <button
-                                onClick={() => handleCancelBooking(booking.BookingID)}
-                                className="rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                            >
-                                Hủy
-                            </button>
-                        )}
                     </div>
-                </div>
-            ))}
+                ))}
 
-            {bookings.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
-                    Bạn chưa có lịch sử đặt phòng nào.
-                </div>
-            )}
+                {bookings.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+                        Bạn chưa có lịch sử đặt phòng nào.
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
 }
+

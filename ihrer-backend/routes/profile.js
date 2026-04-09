@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
 const { hashPassword, verifyPassword } = require("../utils/password");
+const MIN_PASSWORD_LENGTH = 8;
 
 router.get("/me", authenticateToken, (req, res) => {
   const sql = `
@@ -99,21 +100,40 @@ router.put("/me", authenticateToken, (req, res) => {
       const user = findResults[0];
       let finalPassword = user.PasswordHash;
 
-      if (newPassword && !currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message: "Vui lòng nhập mật khẩu hiện tại.",
-        });
-      }
+      const hasCurrentPassword =
+        typeof currentPassword === "string" && currentPassword.trim().length > 0;
+      const hasNewPassword =
+        typeof newPassword === "string" && newPassword.trim().length > 0;
 
-      if (newPassword && !verifyPassword(currentPassword, user.PasswordHash)) {
+      if (hasCurrentPassword && !verifyPassword(currentPassword, user.PasswordHash)) {
         return res.status(400).json({
           success: false,
           message: "Mật khẩu hiện tại không đúng.",
         });
       }
 
-      if (newPassword) {
+      if (hasCurrentPassword && !hasNewPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập mật khẩu mới.",
+        });
+      }
+
+      if (hasNewPassword && !hasCurrentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập mật khẩu hiện tại.",
+        });
+      }
+
+      if (hasNewPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({
+          success: false,
+          message: `Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`,
+        });
+      }
+
+      if (hasNewPassword) {
         finalPassword = hashPassword(newPassword);
       }
 
@@ -137,7 +157,7 @@ router.put("/me", authenticateToken, (req, res) => {
 
           return res.json({
             success: true,
-            message: newPassword
+            message: hasNewPassword
               ? "Cập nhật thông tin và đổi mật khẩu thành công."
               : "Cập nhật thông tin cá nhân thành công.",
             user: {

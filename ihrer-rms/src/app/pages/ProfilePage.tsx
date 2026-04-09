@@ -23,6 +23,7 @@ export default function ProfilePage({
     role: "",
     currentPassword: "",
     newPassword: "",
+    confirmPassword: "",
   });
 
   const [message, setMessage] = useState("");
@@ -47,6 +48,7 @@ export default function ProfilePage({
             role: data.data.Role || "",
             currentPassword: "",
             newPassword: "",
+            confirmPassword: "",
           });
         } else {
           setMessage(data.message || "Không thể tải thông tin cá nhân.");
@@ -67,6 +69,24 @@ export default function ProfilePage({
     setMessageType("");
 
     try {
+      if (form.newPassword && form.newPassword.length < 8) {
+        setMessage("Mật khẩu phải có ít nhất 8 ký tự.");
+        setMessageType("error");
+        return;
+      }
+
+      if (form.newPassword && form.newPassword !== form.confirmPassword) {
+        setMessage("Mật khẩu xác nhận không khớp.");
+        setMessageType("error");
+        return;
+      }
+
+      if (form.newPassword && !form.currentPassword) {
+        setMessage("Vui lòng nhập mật khẩu hiện tại.");
+        setMessageType("error");
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/profile/me`, {
         method: "PUT",
         headers: {
@@ -99,6 +119,7 @@ export default function ProfilePage({
         email: data.user?.email ?? prev.email,
         currentPassword: "",
         newPassword: "",
+        confirmPassword: "",
       }));
 
       setMessage(data.message || "Cập nhật thành công.");
@@ -193,6 +214,19 @@ export default function ProfilePage({
           />
         </div>
 
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Xác nhận mật khẩu mới
+          </label>
+          <input
+            type="password"
+            value={form.confirmPassword}
+            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+            placeholder="Nhập lại mật khẩu mới"
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+          />
+        </div>
+
         {message && (
           <div
             className={`md:col-span-2 rounded-2xl px-4 py-3 text-sm ${
@@ -217,3 +251,4 @@ export default function ProfilePage({
     </div>
   );
 }
+

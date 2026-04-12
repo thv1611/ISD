@@ -45,6 +45,13 @@ app.use((req, _res, next) => {
   next();
 });
 
+app.get("/", (_req, res) => {
+  res.json({
+    success: true,
+    message: "ISD backend is running.",
+  });
+});
+
 app.use("/auth", authRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/resources", resourceRoutes);

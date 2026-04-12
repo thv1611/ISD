@@ -77,25 +77,12 @@ async function sendResetOtpEmail({ toEmail, fullName, otpCode }) {
 
 router.post("/login", (req, res) => {
   const { identifier, password } = req.body;
+  console.log("LOGIN BODY:", req.body);
 
-  if (!identifier && !password) {
+  if (!identifier || !password) {
     return res.status(400).json({
       success: false,
       message: "Vui lòng nhập Email/Mã nhân viên và mật khẩu.",
-    });
-  }
-
-  if (!identifier) {
-    return res.status(400).json({
-      success: false,
-      message: "Vui lòng nhập Email hoặc Mã nhân viên.",
-    });
-  }
-
-  if (!password) {
-    return res.status(400).json({
-      success: false,
-      message: "Vui lòng nhập mật khẩu.",
     });
   }
 
@@ -123,7 +110,7 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (results.length === 0) {
+    if (!results || results.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Email hoặc Mã nhân viên không tồn tại.",
@@ -131,6 +118,7 @@ router.post("/login", (req, res) => {
     }
 
     const user = results[0];
+    console.log("USER:", user);
 
     if (user.AccountStatus === "Locked") {
       return res.status(403).json({
@@ -139,7 +127,23 @@ router.post("/login", (req, res) => {
       });
     }
 
-    if (!verifyPassword(password, user.PasswordHash)) {
+    let isValidPassword = false;
+
+    try {
+      if (isHashedPassword(user.PasswordHash)) {
+        isValidPassword = verifyPassword(password, user.PasswordHash);
+      } else {
+        isValidPassword = String(password) === String(user.PasswordHash);
+      }
+    } catch (verifyErr) {
+      console.error("Password verification failed:", verifyErr);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi xác thực mật khẩu.",
+      });
+    }
+
+    if (!isValidPassword) {
       const newAttempts = Number(user.FailedLoginAttempts || 0) + 1;
       const willLock = newAttempts >= 5;
 

@@ -13,7 +13,7 @@ router.get("/", authenticateToken, requireRole("Admin"), (req, res) => {
       Email,
       Role,
       AccountStatus
-    FROM Employees
+    FROM employees
     ORDER BY EmployeeID ASC
   `;
 
@@ -44,7 +44,7 @@ router.post("/", authenticateToken, requireRole("Admin"), (req, res) => {
 
   const checkSql = `
     SELECT EmployeeID
-    FROM Employees
+    FROM employees
     WHERE EmployeeCode = ? OR Email = ?
     LIMIT 1
   `;
@@ -68,7 +68,7 @@ router.post("/", authenticateToken, requireRole("Admin"), (req, res) => {
     const defaultPasswordHash = hashPassword("1");
 
     const insertSql = `
-      INSERT INTO Employees
+      INSERT INTO employees
       (EmployeeCode, FullName, Email, PasswordHash, Role, AccountStatus, FailedLoginAttempts)
       VALUES (?, ?, ?, ?, ?, ?, 0)
     `;
@@ -107,7 +107,7 @@ router.put("/:id", authenticateToken, requireRole("Admin"), (req, res) => {
 
   const checkSql = `
     SELECT EmployeeID
-    FROM Employees
+    FROM employees
     WHERE (EmployeeCode = ? OR Email = ?) AND EmployeeID <> ?
     LIMIT 1
   `;
@@ -129,7 +129,7 @@ router.put("/:id", authenticateToken, requireRole("Admin"), (req, res) => {
     }
 
     const updateSql = `
-      UPDATE Employees
+      UPDATE employees
       SET EmployeeCode = ?, FullName = ?, Email = ?, Role = ?, AccountStatus = ?
       WHERE EmployeeID = ?
     `;
@@ -159,7 +159,7 @@ router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, 
   const { id } = req.params;
 
   db.query(
-    "SELECT AccountStatus FROM Employees WHERE EmployeeID = ? LIMIT 1",
+    "SELECT AccountStatus FROM employees WHERE EmployeeID = ? LIMIT 1",
     [id],
     (findErr, findResults) => {
       if (findErr || findResults.length === 0) {
@@ -176,7 +176,7 @@ router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, 
       const nextStatus = currentStatus === "Active" ? "Locked" : "Active";
 
       db.query(
-        "UPDATE Employees SET AccountStatus = ? WHERE EmployeeID = ?",
+        "UPDATE employees SET AccountStatus = ? WHERE EmployeeID = ?",
         [nextStatus, id],
         (updateErr) => {
           if (updateErr) {

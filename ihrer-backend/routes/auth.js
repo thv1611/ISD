@@ -96,7 +96,7 @@ router.post("/login", (req, res) => {
       Role,
       AccountStatus,
       FailedLoginAttempts
-    FROM Employees
+    FROM employees
     WHERE Email = ? OR EmployeeCode = ?
     LIMIT 1
   `;
@@ -149,7 +149,7 @@ router.post("/login", (req, res) => {
 
       db.query(
         `
-          UPDATE Employees
+          UPDATE employees
           SET FailedLoginAttempts = ?, AccountStatus = ?
           WHERE EmployeeID = ?
         `,
@@ -185,7 +185,7 @@ router.post("/login", (req, res) => {
       : hashPassword(password);
 
     db.query(
-      "UPDATE Employees SET FailedLoginAttempts = 0, PasswordHash = ? WHERE EmployeeID = ?",
+      "UPDATE employees SET FailedLoginAttempts = 0, PasswordHash = ? WHERE EmployeeID = ?",
       [nextStoredPassword, user.EmployeeID],
       (resetErr) => {
         if (resetErr) {
@@ -231,7 +231,7 @@ router.post("/request-password-reset", (req, res) => {
 
   const sql = `
     SELECT EmployeeID, EmployeeCode, FullName, Email
-    FROM Employees
+    FROM employees
     WHERE LOWER(Email) = LOWER(?) OR EmployeeCode = ?
     LIMIT 1
   `;
@@ -330,7 +330,7 @@ router.post("/confirm-password-reset", (req, res) => {
   db.query(
     `
       SELECT EmployeeID, Email
-      FROM Employees
+      FROM employees
       WHERE LOWER(Email) = LOWER(?) OR EmployeeCode = ?
       LIMIT 1
     `,
@@ -415,7 +415,7 @@ router.post("/confirm-password-reset", (req, res) => {
 
       db.query(
         `
-          UPDATE Employees
+          UPDATE employees
           SET PasswordHash = ?, FailedLoginAttempts = 0, AccountStatus = 'Active'
           WHERE EmployeeID = ?
         `,

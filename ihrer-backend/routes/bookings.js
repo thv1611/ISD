@@ -41,7 +41,7 @@ router.get("/calendar", authenticateToken, (req, res) => {
       e.EmployeeCode
     FROM Bookings b
     JOIN Resources r ON b.ResourceID = r.ResourceID
-    JOIN Employees e ON b.EmployeeID = e.EmployeeID
+    JOIN employees e ON b.EmployeeID = e.EmployeeID
     WHERE r.IsActive = 1
     ORDER BY b.BookingDate, r.ResourceName, b.StartTime
   `;

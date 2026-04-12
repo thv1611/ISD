@@ -14,7 +14,7 @@ router.get("/me", authenticateToken, (req, res) => {
       Email,
       Role,
       AccountStatus
-    FROM Employees
+    FROM employees
     WHERE EmployeeID = ?
     LIMIT 1
   `;
@@ -53,7 +53,7 @@ router.put("/me", authenticateToken, (req, res) => {
 
   const checkEmailSql = `
     SELECT EmployeeID
-    FROM Employees
+    FROM employees
     WHERE Email = ? AND EmployeeID <> ?
     LIMIT 1
   `;
@@ -76,7 +76,7 @@ router.put("/me", authenticateToken, (req, res) => {
 
     const getUserSql = `
       SELECT EmployeeID, EmployeeCode, FullName, Email, Role, PasswordHash
-      FROM Employees
+      FROM employees
       WHERE EmployeeID = ?
       LIMIT 1
     `;
@@ -138,7 +138,7 @@ router.put("/me", authenticateToken, (req, res) => {
       }
 
       const updateSql = `
-        UPDATE Employees
+        UPDATE employees
         SET FullName = ?, Email = ?, PasswordHash = ?
         WHERE EmployeeID = ?
       `;

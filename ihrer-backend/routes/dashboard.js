@@ -12,7 +12,7 @@ router.get("/summary", authenticateToken, (req, res) => {
     `,
     totalUsers: `
       SELECT COUNT(*) AS total
-      FROM Employees
+      FROM employees
       WHERE AccountStatus = 'Active'
     `,
     totalBooked: `

@@ -69,12 +69,6 @@ export default function ProfilePage({
     setMessageType("");
 
     try {
-      if (form.newPassword && form.newPassword.length < 8) {
-        setMessage("Mật khẩu phải có ít nhất 8 ký tự.");
-        setMessageType("error");
-        return;
-      }
-
       if (form.newPassword && form.newPassword !== form.confirmPassword) {
         setMessage("Mật khẩu xác nhận không khớp.");
         setMessageType("error");

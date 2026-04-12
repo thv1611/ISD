@@ -4,14 +4,16 @@ const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
 
 function parseDateAndTime(dateValue, timeValue) {
-  const date = new Date(dateValue);
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   const [hours, minutes, seconds = "00"] = String(timeValue).split(":");
   date.setHours(Number(hours), Number(minutes), Number(seconds), 0);
   return date;
 }
 
 function isPastDateOnly(dateString) {
-  const inputDate = new Date(dateString);
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  const inputDate = new Date(year, month - 1, day);
   const today = new Date();
   inputDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);

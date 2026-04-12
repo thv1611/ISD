@@ -22,8 +22,13 @@ type BookingHistoryPageProps = {
 };
 
 function formatDateVN(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN");
+    const [year, month, day] = dateString.split("-");
+
+    if (!year || !month || !day) {
+        return dateString;
+    }
+
+    return `${day}/${month}/${year}`;
 }
 
 export default function BookingHistoryPage({

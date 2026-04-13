@@ -25,6 +25,8 @@ function isWithinWorkingHours(startTime, endTime) {
 }
 
 router.get("/calendar", authenticateToken, (req, res) => {
+  console.log("[GET /bookings/calendar] query params:", req.query);
+
   const sql = `
     SELECT
       b.BookingID,
@@ -39,8 +41,8 @@ router.get("/calendar", authenticateToken, (req, res) => {
       r.ResourceType,
       e.FullName,
       e.EmployeeCode
-    FROM Bookings b
-    JOIN Resources r ON b.ResourceID = r.ResourceID
+    FROM bookings b
+    JOIN resources r ON b.ResourceID = r.ResourceID
     JOIN employees e ON b.EmployeeID = e.EmployeeID
     WHERE r.IsActive = 1
     ORDER BY b.BookingDate, r.ResourceName, b.StartTime
@@ -48,11 +50,14 @@ router.get("/calendar", authenticateToken, (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
+      console.error("[GET /bookings/calendar] SQL error:", err);
       return res.status(500).json({
         success: false,
         message: "Không thể tải dữ liệu lịch.",
       });
     }
+
+    console.log("[GET /bookings/calendar] result length:", results.length);
 
     return res.json({
       success: true,
@@ -63,6 +68,8 @@ router.get("/calendar", authenticateToken, (req, res) => {
 
 router.get("/my/:employeeId", authenticateToken, (req, res) => {
   const { employeeId } = req.params;
+
+  console.log("[GET /bookings/my/:employeeId] query params:", req.query);
 
   if (req.user.role !== "Admin" && Number(req.user.id) !== Number(employeeId)) {
     return res.status(403).json({
@@ -82,19 +89,22 @@ router.get("/my/:employeeId", authenticateToken, (req, res) => {
       b.CancelledAt,
       r.ResourceName,
       r.ResourceType
-    FROM Bookings b
-    JOIN Resources r ON b.ResourceID = r.ResourceID
+    FROM bookings b
+    JOIN resources r ON b.ResourceID = r.ResourceID
     WHERE b.EmployeeID = ?
     ORDER BY b.BookingDate DESC, b.StartTime DESC
   `;
 
   db.query(sql, [employeeId], (err, results) => {
     if (err) {
+      console.error("[GET /bookings/my/:employeeId] SQL error:", err);
       return res.status(500).json({
         success: false,
         message: "Không thể tải lịch sử đặt phòng.",
       });
     }
+
+    console.log("[GET /bookings/my/:employeeId] result length:", results.length);
 
     return res.json({
       success: true,
@@ -143,7 +153,7 @@ router.post("/", authenticateToken, (req, res) => {
 
   const overlapSql = `
     SELECT BookingID
-    FROM Bookings
+    FROM bookings
     WHERE ResourceID = ?
       AND BookingDate = ?
       AND BookingStatus = 'Đã đặt'
@@ -170,7 +180,7 @@ router.post("/", authenticateToken, (req, res) => {
       }
 
       const insertSql = `
-        INSERT INTO Bookings
+        INSERT INTO bookings
         (EmployeeID, ResourceID, BookingDate, StartTime, EndTime, Purpose, BookingStatus)
         VALUES (?, ?, ?, ?, ?, ?, 'Đã đặt')
       `;
@@ -201,7 +211,7 @@ router.patch("/:bookingId/cancel", authenticateToken, (req, res) => {
 
   const findSql = `
     SELECT BookingID, EmployeeID, BookingDate, StartTime, BookingStatus
-    FROM Bookings
+    FROM bookings
     WHERE BookingID = ?
     LIMIT 1
   `;
@@ -242,7 +252,7 @@ router.patch("/:bookingId/cancel", authenticateToken, (req, res) => {
     }
 
     const updateSql = `
-      UPDATE Bookings
+      UPDATE bookings
       SET BookingStatus = 'Đã hủy', CancelledAt = NOW()
       WHERE BookingID = ?
     `;

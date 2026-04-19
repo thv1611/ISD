@@ -220,7 +220,7 @@ export default function BookingPage({
           </select>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+        <form noValidate onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Chọn phòng
@@ -316,7 +316,6 @@ export default function BookingPage({
                 onBlur={() =>
                   setRequiredErrors((prev) => ({ ...prev, purpose: !form.purpose.trim() }))
                 }
-                required
                 placeholder="Ví dụ: Họp nhóm, học thực hành..."
                 className={`w-full rounded-2xl border px-4 py-3 pr-10 outline-none transition ${requiredErrors.purpose
                     ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100"

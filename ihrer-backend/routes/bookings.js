@@ -3,6 +3,20 @@ const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
 
+function queryWithTableFallback(tableNames, buildSql, params, callback) {
+  const tryQuery = (index) => {
+    db.query(buildSql(tableNames[index]), params, (err, results) => {
+      if (err && err.code === "ER_NO_SUCH_TABLE" && index < tableNames.length - 1) {
+        return tryQuery(index + 1);
+      }
+
+      return callback(err, results);
+    });
+  };
+
+  return tryQuery(0);
+}
+
 function parseDateAndTime(dateValue, timeValue) {
   const [year, month, day] = String(dateValue).split("-").map(Number);
   const date = new Date(year, month - 1, day);
@@ -208,69 +222,85 @@ router.post("/", authenticateToken, (req, res) => {
 
 router.patch("/:bookingId/cancel", authenticateToken, (req, res) => {
   const { bookingId } = req.params;
+  const bookingTables = ["bookings", "Bookings"];
 
-  const findSql = `
-    SELECT BookingID, EmployeeID, BookingDate, StartTime, BookingStatus
-    FROM bookings
-    WHERE BookingID = ?
-    LIMIT 1
-  `;
-
-  db.query(findSql, [bookingId], (findErr, findResults) => {
-    if (findErr || findResults.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy booking.",
-      });
-    }
-
-    const booking = findResults[0];
-
-    if (Number(booking.EmployeeID) !== Number(req.user.id) && req.user.role !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Bạn không có quyền hủy booking này.",
-      });
-    }
-
-    if (booking.BookingStatus === "Đã hủy") {
-      return res.status(400).json({
-        success: false,
-        message: "Booking này đã được hủy trước đó.",
-      });
-    }
-
-    const bookingDateTime = parseDateAndTime(booking.BookingDate, booking.StartTime);
-    const now = new Date();
-    const diffMinutes = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60);
-
-    if (diffMinutes < 60) {
-      return res.status(400).json({
-        success: false,
-        message: "Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất 60 phút.",
-      });
-    }
-
-    const updateSql = `
-      UPDATE bookings
-      SET BookingStatus = 'Đã hủy', CancelledAt = NOW()
+  queryWithTableFallback(
+    bookingTables,
+    (tableName) => `
+      SELECT BookingID, EmployeeID, BookingDate, StartTime, BookingStatus
+      FROM ${tableName}
       WHERE BookingID = ?
-    `;
-
-    db.query(updateSql, [bookingId], (updateErr) => {
-      if (updateErr) {
+      LIMIT 1
+    `,
+    [bookingId],
+    (findErr, findResults) => {
+      if (findErr) {
+        console.error("Booking cancel lookup failed:", findErr);
         return res.status(500).json({
           success: false,
-          message: "Không thể hủy booking.",
+          message: "Không thể kiểm tra booking cần hủy.",
         });
       }
 
-      return res.json({
-        success: true,
-        message: "Hủy booking thành công.",
-      });
-    });
-  });
+      if (findResults.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy booking.",
+        });
+      }
+
+      const booking = findResults[0];
+
+      if (Number(booking.EmployeeID) !== Number(req.user.id) && req.user.role !== "Admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Bạn không có quyền hủy booking này.",
+        });
+      }
+
+      if (booking.BookingStatus === "Đã hủy") {
+        return res.status(400).json({
+          success: false,
+          message: "Booking này đã được hủy trước đó.",
+        });
+      }
+
+      const bookingDateTime = parseDateAndTime(booking.BookingDate, booking.StartTime);
+      const now = new Date();
+      const diffMinutes = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+      if (diffMinutes < 60) {
+        return res.status(400).json({
+          success: false,
+          message: "Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất 60 phút.",
+        });
+      }
+
+      queryWithTableFallback(
+        bookingTables,
+        (tableName) => `
+          UPDATE ${tableName}
+          SET BookingStatus = 'Đã hủy', CancelledAt = NOW()
+          WHERE BookingID = ?
+        `,
+        [bookingId],
+        (updateErr) => {
+          if (updateErr) {
+            console.error("Booking cancel update failed:", updateErr);
+            return res.status(500).json({
+              success: false,
+              message: "Không thể hủy booking.",
+            });
+          }
+
+          return res.json({
+            success: true,
+            message: "Hủy booking thành công.",
+          });
+        }
+      );
+    }
+  );
 });
 
 module.exports = router;

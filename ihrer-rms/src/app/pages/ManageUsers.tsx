@@ -130,25 +130,32 @@ export default function ManageUsers({
   };
 
   const handleToggleLock = async (id: number, currentStatus: "Active" | "Locked") => {
-  const actionText = currentStatus === "Active" ? "khóa" : "mở khóa";
-  const confirmed = window.confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản này không?`);
-  if (!confirmed) return;
+    const actionText = currentStatus === "Active" ? "khóa" : "mở khóa";
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản này không?`);
+    if (!confirmed) return;
 
-  const response = await fetch(
-    `${API_BASE}/users/${id}/toggle-lock`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
+    try {
+      const response = await fetch(
+        `${API_BASE}/users/${id}/toggle-lock`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+
+      const rawText = await response.text();
+      const data = rawText ? JSON.parse(rawText) : null;
+
+      setMessage(data?.message || "Đã cập nhật trạng thái.");
+      if (response.ok && data?.success) {
+        await onRefresh();
+      }
+    } catch (_error) {
+      setMessage("Không thể kết nối tới máy chủ để cập nhật trạng thái tài khoản.");
     }
-  );
-  const data = await response.json();
-  setMessage(data.message || "Đã cập nhật trạng thái.");
-  if (data.success) {
-    await onRefresh();
-  }
-};
+  };
 
   return (
     <div className="space-y-5">

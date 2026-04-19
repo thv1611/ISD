@@ -4,6 +4,20 @@ const db = require("../db");
 const { authenticateToken, requireRole } = require("../middleware/auth");
 const { hashPassword } = require("../utils/password");
 
+function queryWithTableFallback(tableNames, buildSql, params, callback) {
+  const tryQuery = (index) => {
+    db.query(buildSql(tableNames[index]), params, (err, results) => {
+      if (err && err.code === "ER_NO_SUCH_TABLE" && index < tableNames.length - 1) {
+        return tryQuery(index + 1);
+      }
+
+      return callback(err, results);
+    });
+  };
+
+  return tryQuery(0);
+}
+
 router.get("/", authenticateToken, requireRole("Admin"), (req, res) => {
   const sql = `
     SELECT
@@ -157,15 +171,22 @@ router.put("/:id", authenticateToken, requireRole("Admin"), (req, res) => {
 
 router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, res) => {
   const { id } = req.params;
+  const employeeTables = ["employees", "Employees"];
 
-  db.query(
-    "SELECT AccountStatus FROM employees WHERE EmployeeID = ? LIMIT 1",
+  queryWithTableFallback(
+    employeeTables,
+    (tableName) => `SELECT AccountStatus FROM ${tableName} WHERE EmployeeID = ? LIMIT 1`,
     [id],
     (findErr, findResults) => {
-      if (findErr || findResults.length === 0) {
-        if (findErr) {
-          console.error("User lock lookup failed:", findErr);
-        }
+      if (findErr) {
+        console.error("User lock lookup failed:", findErr);
+        return res.status(500).json({
+          success: false,
+          message: "Không thể kiểm tra trạng thái tài khoản.",
+        });
+      }
+
+      if (findResults.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Không tìm thấy người dùng.",
@@ -175,8 +196,9 @@ router.patch("/:id/toggle-lock", authenticateToken, requireRole("Admin"), (req, 
       const currentStatus = findResults[0].AccountStatus;
       const nextStatus = currentStatus === "Active" ? "Locked" : "Active";
 
-      db.query(
-        "UPDATE employees SET AccountStatus = ? WHERE EmployeeID = ?",
+      queryWithTableFallback(
+        employeeTables,
+        (tableName) => `UPDATE ${tableName} SET AccountStatus = ? WHERE EmployeeID = ?`,
         [nextStatus, id],
         (updateErr) => {
           if (updateErr) {

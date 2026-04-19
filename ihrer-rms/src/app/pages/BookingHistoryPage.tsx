@@ -18,7 +18,7 @@ type BookingHistoryPageProps = {
         role: "Admin" | "Staff";
     };
     renderStatusBadge: (status: string) => React.ReactNode;
-    onRefresh: () => void;
+    onRefresh: () => Promise<void> | void;
 };
 
 function formatDateVN(dateString: string) {
@@ -42,21 +42,27 @@ export default function BookingHistoryPage({
         const confirmed = window.confirm("Bạn có chắc chắn muốn hủy đặt phòng này không?");
         if (!confirmed) return;
 
-        const response = await fetch(
-            `${API_BASE}/bookings/${bookingId}/cancel`,
-            {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${authToken}`,
-                },
-            }
-        );
+        try {
+            const response = await fetch(
+                `${API_BASE}/bookings/${bookingId}/cancel`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                }
+            );
 
-        const data = await response.json();
-        alert(data.message || "Đã xử lý.");
-        if (data.success) {
-            onRefresh();
+            const rawText = await response.text();
+            const data = rawText ? JSON.parse(rawText) : null;
+
+            alert(data?.message || "Đã xử lý.");
+            if (response.ok && data?.success) {
+                await Promise.resolve(onRefresh());
+            }
+        } catch (_error) {
+            alert("Không thể kết nối tới máy chủ để hủy booking.");
         }
     };
 

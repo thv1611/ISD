@@ -2,6 +2,12 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
+const {
+  CANCELLATION_LEAD_MINUTES,
+  canCancelBooking,
+  parseDateAndTime,
+  isPastDateOnly,
+} = require("../utils/bookingDateTime");
 
 function queryWithTableFallback(tableNames, buildSql, params, callback) {
   const tryQuery = (index) => {
@@ -15,23 +21,6 @@ function queryWithTableFallback(tableNames, buildSql, params, callback) {
   };
 
   return tryQuery(0);
-}
-
-function parseDateAndTime(dateValue, timeValue) {
-  const [year, month, day] = String(dateValue).split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  const [hours, minutes, seconds = "00"] = String(timeValue).split(":");
-  date.setHours(Number(hours), Number(minutes), Number(seconds), 0);
-  return date;
-}
-
-function isPastDateOnly(dateString) {
-  const [year, month, day] = String(dateString).split("-").map(Number);
-  const inputDate = new Date(year, month - 1, day);
-  const today = new Date();
-  inputDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return inputDate < today;
 }
 
 function isWithinWorkingHours(startTime, endTime) {
@@ -267,12 +256,11 @@ router.patch("/:bookingId/cancel", authenticateToken, (req, res) => {
 
       const bookingDateTime = parseDateAndTime(booking.BookingDate, booking.StartTime);
       const now = new Date();
-      const diffMinutes = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60);
 
-      if (diffMinutes < 60) {
+      if (!canCancelBooking(bookingDateTime, now)) {
         return res.status(400).json({
           success: false,
-          message: "Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất 60 phút.",
+          message: `Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất ${CANCELLATION_LEAD_MINUTES} phút.`,
         });
       }
 

@@ -1,5 +1,7 @@
 import { API_BASE } from "../config";
 
+const CANCELLATION_LEAD_MINUTES = 30;
+
 type BookingHistoryPageProps = {
     bookings: {
         BookingID: number;
@@ -21,6 +23,18 @@ type BookingHistoryPageProps = {
     onRefresh: () => Promise<void> | void;
 };
 
+function parseBookingDateTime(dateString: string, timeString: string) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const [hours, minutes, seconds = "00"] = timeString.split(":").map(Number);
+    return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, seconds || 0, 0);
+}
+
+function canCancelBooking(dateString: string, timeString: string, now = new Date()) {
+    const bookingDateTime = parseBookingDateTime(dateString, timeString);
+    const diffMinutes = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60);
+    return diffMinutes >= CANCELLATION_LEAD_MINUTES;
+}
+
 function formatDateVN(dateString: string) {
     const [year, month, day] = dateString.split("-");
 
@@ -38,7 +52,12 @@ export default function BookingHistoryPage({
     renderStatusBadge,
     onRefresh,
 }: BookingHistoryPageProps) {
-    const handleCancelBooking = async (bookingId: number) => {
+    const handleCancelBooking = async (bookingId: number, bookingDate: string, startTime: string) => {
+        if (!canCancelBooking(bookingDate, startTime)) {
+            alert(`Bạn chỉ có thể hủy lịch trước giờ bắt đầu ít nhất ${CANCELLATION_LEAD_MINUTES} phút.`);
+            return;
+        }
+
         const confirmed = window.confirm("Bạn có chắc chắn muốn hủy đặt phòng này không?");
         if (!confirmed) return;
 
@@ -110,7 +129,7 @@ export default function BookingHistoryPage({
 
                             {booking.BookingStatus === "Đã đặt" && currentUser.role === "Staff" && (
                                 <button
-                                    onClick={() => handleCancelBooking(booking.BookingID)}
+                                    onClick={() => handleCancelBooking(booking.BookingID, booking.BookingDate, booking.StartTime)}
                                     className="rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                                 >
                                     Hủy
